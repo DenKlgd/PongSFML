@@ -1,0 +1,229 @@
+#include "SFML/Graphics.hpp"
+#include "Ping-pong.h"
+#include "GameStates.h"
+#include "WindowInputHandlers.h"
+#include "GUI.h"
+#include "PongMenues.h"
+#include "Network.h"
+#include "Connection.h"
+
+sf::RenderWindow mainRenderWindow;
+sf::Vector2u windowSize(600, 400);
+sf::Event event;
+sf::Font font;
+WindowInputHandlers::KeyboardInputHandler keyboardHandler;
+GameState gameState;
+Pong* pong = nullptr;
+TCPnetwork::TCP_Base* network;
+
+sf::UdpSocket udpSock;
+sf::IpAddress remoteIP;
+uint16_t port = 53000;
+ConnectionStatus connectionStatus;
+
+int main()
+{
+	sf::Socket::Status status;
+	char data[32]{'\0'};
+	size_t received = 0;
+
+	font.loadFromFile("Misc/Nautilus.otf");
+
+	initMainMenu();
+	initPauseMenu();
+	initMultiplayerMenu();
+	initConnectMenu();
+	initWaitingForConnectionMenu();
+
+	gameState.setImmediately(EGameState::Menu);
+	mainRenderWindow.create(sf::VideoMode(windowSize.x, windowSize.y), "Ping-pong");
+
+	while (mainRenderWindow.isOpen())
+	{
+		while (mainRenderWindow.pollEvent(event))
+		{
+			if (event.type == sf::Event::Closed)
+				mainRenderWindow.close();
+
+			if (event.type == sf::Event::KeyPressed)
+				keyboardHandler.pushKey(event.key.code);
+			else if (event.type == sf::Event::KeyReleased)
+				keyboardHandler.popKey(event.key.code);
+
+			if (keyboardHandler.isPressed(sf::Keyboard::Escape))
+			{
+				EGameState currentGameState = gameState.getGameState();
+				if (currentGameState == EGameState::InGame || currentGameState == EGameState::InMultiplayer)
+					gameState.requestGameStateChange(EGameState::Pause);
+			}
+
+			switch (gameState.getGameState())
+			{
+			case EGameState::InGame:
+				pong->UserInput();
+				break;
+			case EGameState::InMultiplayer:
+				pong->UserInput();
+				break;
+			case EGameState::Menu:
+				handleMainMenuInput(mainMenu.userInput(event));
+				break;
+			case EGameState::Pause:
+				handlePauseMenuInput(pauseMenu.userInput(event));
+				break;
+			case EGameState::MultiplayerMenu:
+				handleMultiplayerMenuInput(multiplayerMenu.userInput(event));
+				break;
+			case EGameState::ConnectMenu:
+				handleConnectMenuInput(connectMenu.userInput(event));
+				break;
+			case EGameState::WaitingForOtherPlayer:
+				handleWaitingForConnectionMenu(waitingForConnectionMenu.userInput(event));
+				break;
+			case EGameState::JoiningToHost:
+				handleWaitingForConnectionMenu(waitingForConnectionMenu.userInput(event));
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (gameState.getGameState() == EGameState::Pause)
+		{
+			pauseMenuNetworkUpdate();
+		}
+
+		switch (gameState.getGameState())
+		{
+		case EGameState::InGame:
+			gameState.applyGameStateChange();
+			pong->GameUpdate();
+			pong->Render();
+			break;
+		case EGameState::InMultiplayer:
+			gameState.applyGameStateChange();
+			if (dynamic_cast<PongClient*>(pong))
+				pong->sendData();
+			else
+				pong->receiveData();
+			pong->GameUpdate();
+			if (dynamic_cast<PongHost*>(pong))
+				pong->sendData();
+			else
+				pong->receiveData();
+			pong->Render();
+			break;
+		case EGameState::Menu:
+			mainMenu.update();
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			mainMenu.draw();
+			break;
+		case EGameState::Pause:
+			pauseMenu.draw();
+			break;
+		case EGameState::MultiplayerMenu:
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			multiplayerMenu.draw();
+			break;
+		case EGameState::ConnectMenu:
+			connectMenu.update();
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			connectMenu.draw();
+			break;
+		case EGameState::WaitingForOtherPlayer:
+			//std::cout << "Listening UDP: " << remoteIP.toString() << " : " << std::to_string(port) << '\n';
+
+			if (connectionStatus == ConnectionStatus::WaitingForConnections)
+			{
+				received = 0;
+				*data = '\0';
+				status = udpSock.receive(data, sizeof(data), received, remoteIP, port);
+				if (std::strcmp(data, "UDP_CLIENT_REQUEST") == 0)
+					connectionStatus = ConnectionStatus::Replying;
+			}
+
+			if (connectionStatus == ConnectionStatus::Replying)
+			{
+				memcpy_s(data, sizeof(data), "UDP_HOST_REPLY\0", strlen("UDP_HOST_REPLY") + 1);
+				status = udpSock.send(data, strlen(data) + 1, remoteIP, port);
+				if (status != sf::Socket::Status::Done)
+					connectionStatus = ConnectionStatus::WaitingForConnections;
+				else
+					connectionStatus = ConnectionStatus::ConnectionEstablished;
+			}
+
+			if (connectionStatus == ConnectionStatus::ConnectionEstablished)
+			{
+				udpSock.unbind();
+				remoteIP = sf::IpAddress::Any;
+				std::string msg;
+				network = new TCPnetwork::Server;
+				dynamic_cast<TCPnetwork::Server*>(network)->listenForConnections();
+				network->sendMessage(std::string("From server to client!\n"));
+				network->receiveMessage(msg);
+				std::cout << msg;
+				pong = new PongHost;
+				gameState.setImmediately(EGameState::InMultiplayer);
+				pong->initGame();
+			}
+			waitingForConnectionMenu.update();
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			waitingForConnectionMenu.draw();
+			break;
+		case EGameState::JoiningToHost:
+			if (connectionStatus == ConnectionStatus::RequestingConnection)
+			{
+				memcpy_s(data, sizeof(data), "UDP_CLIENT_REQUEST\0", strlen("UDP_CLIENT_REQUEST") + 1);
+				status = udpSock.send(data, strlen(data) + 1, remoteIP, port);
+				if (status == sf::Socket::Status::Done)
+					connectionStatus = ConnectionStatus::WaitingForReply;
+			}
+			//std::cout << "Joining to: " << remoteIP.toString() << " : " << std::to_string(port) << '\n';
+
+			if (connectionStatus == ConnectionStatus::WaitingForReply)
+			{
+				received = 0;
+				status = udpSock.receive(data, sizeof(data), received, remoteIP, port);
+				if (status == sf::Socket::Status::Done)
+				{
+					if (strcmp(data, "UDP_HOST_REPLY") != 0)
+						connectionStatus = ConnectionStatus::RequestingConnection;
+					else
+						connectionStatus = ConnectionStatus::ConnectionEstablished;
+				}
+			}
+
+			if (connectionStatus == ConnectionStatus::ConnectionEstablished)
+			{
+				std::string msg;
+				network = new TCPnetwork::Client;
+				dynamic_cast<TCPnetwork::Client*>(network)->connect(remoteIP.toString());
+				network->sendMessage(std::string("From client to server!\n"));
+				network->receiveMessage(msg);
+				std::cout << msg;
+				pong = new PongClient;
+				gameState.setImmediately(EGameState::InMultiplayer);
+				pong->initGame();
+			}
+			waitingForConnectionMenu.update();
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			waitingForConnectionMenu.draw();
+			break;
+		default:
+			break;
+		}
+		mainRenderWindow.display();
+	}
+
+	if (network != nullptr)
+	{
+		network->closeConnection();
+		delete network;
+	}
+	if (pong != nullptr)
+	{
+		delete pong;
+	}
+
+	return 0;
+}
