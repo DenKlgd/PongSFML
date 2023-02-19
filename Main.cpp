@@ -6,6 +6,7 @@
 #include "PongMenues.h"
 #include "Network.h"
 #include "Connection.h"
+#include <Windows.h>
 
 sf::RenderWindow mainRenderWindow;
 sf::Vector2u windowSize(600, 400);
@@ -17,11 +18,12 @@ Pong* pong = nullptr;
 TCPnetwork::TCP_Base* network;
 
 sf::UdpSocket udpSock;
-sf::IpAddress remoteIP;
+sf::IpAddress remoteIP, remoteIPbuffer;
 uint16_t port = 53000;
 ConnectionStatus connectionStatus;
 
-int main()
+//int main()
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
 {
 	sf::Socket::Status status;
 	char data[32]{'\0'};
@@ -131,8 +133,6 @@ int main()
 			connectMenu.draw();
 			break;
 		case EGameState::WaitingForOtherPlayer:
-			//std::cout << "Listening UDP: " << remoteIP.toString() << " : " << std::to_string(port) << '\n';
-
 			if (connectionStatus == ConnectionStatus::WaitingForConnections)
 			{
 				received = 0;
@@ -155,13 +155,9 @@ int main()
 			if (connectionStatus == ConnectionStatus::ConnectionEstablished)
 			{
 				udpSock.unbind();
-				remoteIP = sf::IpAddress::Any;
-				std::string msg;
+				remoteIP = sf::IpAddress::Any;			
 				network = new TCPnetwork::Server;
 				dynamic_cast<TCPnetwork::Server*>(network)->listenForConnections();
-				network->sendMessage(std::string("From server to client!\n"));
-				network->receiveMessage(msg);
-				std::cout << msg;
 				pong = new PongHost;
 				gameState.setImmediately(EGameState::InMultiplayer);
 				pong->initGame();
@@ -178,7 +174,6 @@ int main()
 				if (status == sf::Socket::Status::Done)
 					connectionStatus = ConnectionStatus::WaitingForReply;
 			}
-			//std::cout << "Joining to: " << remoteIP.toString() << " : " << std::to_string(port) << '\n';
 
 			if (connectionStatus == ConnectionStatus::WaitingForReply)
 			{
@@ -191,16 +186,18 @@ int main()
 					else
 						connectionStatus = ConnectionStatus::ConnectionEstablished;
 				}
+				else
+				{
+					remoteIP = remoteIPbuffer;
+					port = 53000;
+					connectionStatus = ConnectionStatus::RequestingConnection;
+				}
 			}
 
 			if (connectionStatus == ConnectionStatus::ConnectionEstablished)
 			{
-				std::string msg;
 				network = new TCPnetwork::Client;
 				dynamic_cast<TCPnetwork::Client*>(network)->connect(remoteIP.toString());
-				network->sendMessage(std::string("From client to server!\n"));
-				network->receiveMessage(msg);
-				std::cout << msg;
 				pong = new PongClient;
 				gameState.setImmediately(EGameState::InMultiplayer);
 				pong->initGame();

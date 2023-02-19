@@ -3,7 +3,6 @@
 #define _USE_MATH_DEFINES
 
 #include <cmath>
-#include <iostream>
 #include "SFML/Graphics.hpp"
 #include "Point2D.h"
 #include "Objects2D.h"
@@ -43,15 +42,16 @@ protected:
 	sf::RectangleShape leftFieldSide, rightFieldSide;
 	sf::CircleShape fieldCenterCircle;
 	sf::Vertex line[2];
+	std::string data;
 
 public:
-	unsigned char playerID = 0;
+	const uint8_t _playerID;
 
 protected:
 	void ballBorderHit(BORDER border);
 
 public:
-	Pong();
+	Pong(uint8_t playerID = 0);
 	void initGame();
 	void ResetGameClock();
 	void movePaddle(Paddle paddle, PaddleDirection paddleDirection);
@@ -66,7 +66,7 @@ public:
 class PongHost : public Pong
 {
 public:
-	PongHost() { playerID = 1; }
+	PongHost();
 	void sendData() override;
 	void receiveData() override;
 	void UserInput() override;
@@ -78,7 +78,7 @@ private:
 	PaddleDirection rightPaddledir = PaddleDirection::None;
 
 public:
-	PongClient() { playerID = 2;  }
+	PongClient();
 	void GameUpdate() override;
 	void sendData() override;
 	void receiveData() override;

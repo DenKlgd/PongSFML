@@ -176,7 +176,6 @@ void handlePauseMenuInput(GUI::ElementID elementID)
 void handleConnectMenuInput(GUI::ElementID elementID)
 {
 	std::string msg;
-	TCPnetwork::Client* client = nullptr;
 	GUI::InputBox* ip = nullptr;
 	ConnectionMenuElements _elementID = static_cast<ConnectionMenuElements>(elementID);
 
@@ -191,6 +190,7 @@ void handleConnectMenuInput(GUI::ElementID elementID)
 		udpSock.unbind();
 		remoteIP = msg;
 		port = 53000;
+		remoteIPbuffer = remoteIP;
 		connectionStatus = ConnectionStatus::RequestingConnection;
 		gameState.setImmediately(EGameState::JoiningToHost);
 		break;
@@ -236,8 +236,6 @@ void pauseMenuNetworkUpdate()
 
 void handleMultiplayerMenuInput(GUI::ElementID elementID)
 {
-	std::string msg;
-	TCPnetwork::Server* host = nullptr;
 	MultiplayerMenuElements _elementID = static_cast<MultiplayerMenuElements>(elementID);
 
 	switch (_elementID)
@@ -264,8 +262,6 @@ void handleMultiplayerMenuInput(GUI::ElementID elementID)
 
 void handleWaitingForConnectionMenu(GUI::ElementID elementID)
 {
-	/*std::string msg;
-	TCPnetwork::Server* host = nullptr;*/
 	WaitingForConnectionMenu _elementID = static_cast<WaitingForConnectionMenu>(elementID);
 
 	switch (_elementID)

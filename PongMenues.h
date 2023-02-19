@@ -1,6 +1,5 @@
 #pragma once
 
-#include <thread>
 #include "SFML/Graphics.hpp"
 #include "Ping-Pong.h"
 #include "GameStates.h"
@@ -58,7 +57,7 @@ extern GUI::Menu waitingForConnectionMenu;
 extern Pong* pong;
 extern TCPnetwork::TCP_Base* network;
 extern sf::UdpSocket udpSock;
-extern sf::IpAddress remoteIP;
+extern sf::IpAddress remoteIP, remoteIPbuffer;
 extern uint16_t port;
 extern ConnectionStatus connectionStatus;
 

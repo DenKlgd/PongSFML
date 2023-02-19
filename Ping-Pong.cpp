@@ -8,7 +8,8 @@ void Pong::ballBorderHit(BORDER border)
         playerScore.addScore(PlayerScoreGUI::Player::FirstPlayer, 1);
 }
 
-Pong::Pong()
+Pong::Pong(uint8_t playerID)
+    : _playerID(playerID)
 {
     srand(time(0));
 
@@ -166,9 +167,13 @@ void Pong::Render()
 
 ///
 
+PongHost::PongHost()
+    : Pong(1)
+{ 
+}
+
 void PongHost::sendData()
 {
-    static std::string data;
     data.clear();
 
     EGameState tmpGameState = gameState.getGameState();
@@ -183,7 +188,6 @@ void PongHost::sendData()
 
 void PongHost::receiveData()
 {
-    static std::string data;
     data.clear();
 
     network->receiveMessage(data);
@@ -210,6 +214,11 @@ void PongHost::UserInput()
 
 ///
 
+PongClient::PongClient()
+    : Pong(2)
+{
+}
+
 void PongClient::GameUpdate()
 {
     timer = clock.restart().asSeconds();
@@ -217,7 +226,6 @@ void PongClient::GameUpdate()
 
 void PongClient::sendData()
 {
-    static std::string data;
     data.clear();
 
     EGameState tmpGameState = gameState.getGameState();
@@ -229,7 +237,6 @@ void PongClient::sendData()
 
 void PongClient::receiveData()
 {
-    static std::string data;
     data.clear();
 
     Points2D::Coords firstPlatformPos;

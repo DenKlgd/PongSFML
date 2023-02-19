@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 
 project(Ping-Pong)
 
-add_executable(Pong Main.cpp
+add_executable(Pong WIN32 
+			Main.cpp
 			Ping-Pong.cpp
 			Objects2D.cpp
 			Physics2D.cpp
