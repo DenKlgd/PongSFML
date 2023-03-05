@@ -11,6 +11,7 @@ enum class EGameState : unsigned char
 	PauseMultiplayer,
 	WaitingForOtherPlayer,
 	JoiningToHost,
+	SETTINGS,
 };
 
 class GameState

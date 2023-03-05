@@ -13,12 +13,15 @@ namespace GUI {
 		BUTTON,
 		INPUTBOX,
 		IMAGEBOX,
+		IMAGEBUTTON,
 	};
 	enum class ElementState
 	{
 		Default,
 		MouseOver,
 		Active,
+		NoRedraw,
+		Clicked,
 	};
 
 	class GUIelement
@@ -28,6 +31,10 @@ namespace GUI {
 		ElementType type = ElementType::NONE;
 		Points2D::Coords coords;
 		Points2D::Size size;
+		sf::Drawable* drawable = nullptr;
+	protected:
+		bool getMousePos(sf::Event&, Points2D::Point2D& mousePos);
+		ElementState processEvent(sf::Event& event);
 	public:
 		virtual void setCoords(Points2D::Coords coords) = 0;
 		virtual void setSize(Points2D::Size size) = 0;
@@ -36,37 +43,40 @@ namespace GUI {
 		virtual void draw(sf::RenderWindow& renderWindow) = 0;
 		virtual void update();
 		virtual bool userInput(sf::Event& event);
+		virtual void rescale(float, float) = 0;
 		virtual ~GUIelement() = default;
 	};
 
 	class ShapeGUIelement : public GUIelement
 	{
 	protected:
-		sf::Shape* shape = nullptr;
 		sf::Color fillColor = sf::Color::White;
 		sf::Color outlineColor = sf::Color::Black;
+		ShapeGUIelement() = default;
 	public:
-		void setCoords(Points2D::Coords coords) override;
 		void setColor(sf::Color fillColor, sf::Color outlineColor);
+		virtual ~ShapeGUIelement() = default;
 	};
 
 	class ImageGUIelement : public GUIelement
 	{
 	protected:
-		sf::Sprite _sprite;
 		float _rotationAngle = 0.f;
 		sf::Clock _timer;
 	protected:
-		void calcSize();
+		virtual void calcSize();
 	public:
-		void setCoords(Points2D::Coords coords) override;
+		virtual void setCoords(Points2D::Coords coords) override;
 		void setSize(Points2D::Size size) override;
 		void setSpriteTexture(sf::Texture& texture);
+		void rotate(float);
 		void setRotation(float);
-		void setScale(float, float);
+		virtual void setScale(float, float);
 		void draw(sf::RenderWindow& renderWindow);
 		void update();
+		virtual void rescale(float, float) override;
 		ImageGUIelement();
+		virtual ~ImageGUIelement();
 	};
 
 	class Label : public ShapeGUIelement
@@ -82,6 +92,7 @@ namespace GUI {
 		bool setFont(sf::Font* font);
 		void draw(sf::RenderWindow& renderWindow) override;
 		virtual bool userInput(sf::Event& event) override;
+		void rescale(float, float) override;
 		Label();
 		virtual ~Label();
 	};
@@ -95,6 +106,21 @@ namespace GUI {
 		void setInteractiveColors(sf::Color mouseOverColor, sf::Color mousePressedColor);
 		bool userInput(sf::Event& event) override;
 		Button();
+	};
+
+	class ImageButton : public ImageGUIelement
+	{
+	protected:
+		sf::RectangleShape frame;
+	protected:
+		void calcSize() override;
+		void setCoords(Points2D::Coords coords) override;
+	public:
+		void setScale(float x, float y) override;
+		bool userInput(sf::Event& event) override;
+		void draw(sf::RenderWindow& renderWindow);
+		void rescale(float, float) override;
+		ImageButton::ImageButton();
 	};
 
 	class InputBox : public Label
@@ -139,19 +165,20 @@ namespace GUI {
 
 	public:
 		sf::RenderWindow* renderWindow = nullptr;
-		Menu();
+		Menu() = default;
 		bool loadFont(sf::Font* font);
 		bool addLabel(sf::String text, Points2D::Coords coords, Points2D::Size size, ElementID elementID);
 		bool addButton(sf::String text, Points2D::Coords coords, Points2D::Size size, ElementID elementID);
 		bool addInputBox(Points2D::Coords coords, Points2D::Size size, ElementID elementID, uint16_t maxStrLen, std::wstring startText);
 		bool addImageBox(Points2D::Coords coords, sf::Texture& texture, ElementID elementID);
+		bool addImageButton(Points2D::Coords coords, sf::Texture& texture, ElementID elementID);
 		bool removeElement(ElementID elementID);
 		void alignElementsCenter(sf::Vector2u windowSize);
+		void setScale(float, float);
 		ElementID userInput(sf::Event& event);
 		void update();
 		void draw();
 		GUIelement* getElementByID(ElementID elementID);
 		~Menu();
-
 	};
 }

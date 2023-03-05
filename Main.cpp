@@ -6,24 +6,31 @@
 #include "PongMenues.h"
 #include "Network.h"
 #include "Connection.h"
-#include <Windows.h>
+
+#ifdef _WIN32
+	#include <Windows.h>
+	#define ENTRY_POINT WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
+#elif
+	#define ENTRY_POINT main()
+#endif
+
 
 sf::RenderWindow mainRenderWindow;
-sf::Vector2u windowSize(600, 400);
+sf::Vector2u windowSize(800, 480);
 sf::Event event;
 sf::Font font;
 WindowInputHandlers::KeyboardInputHandler keyboardHandler;
 GameState gameState;
 Pong* pong = nullptr;
 TCPnetwork::TCP_Base* network;
+Points2D::Point2D scale {1.f, 1.f};
 
 sf::UdpSocket udpSock;
 sf::IpAddress remoteIP, remoteIPbuffer;
 uint16_t port = 53000;
 ConnectionStatus connectionStatus;
 
-//int main()
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
+int ENTRY_POINT
 {
 	sf::Socket::Status status;
 	char data[32]{'\0'};
@@ -36,9 +43,10 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdsh
 	initMultiplayerMenu();
 	initConnectMenu();
 	initWaitingForConnectionMenu();
+	initOptionsMenu();
 
 	gameState.setImmediately(EGameState::Menu);
-	mainRenderWindow.create(sf::VideoMode(windowSize.x, windowSize.y), "Ping-pong");
+	mainRenderWindow.create(sf::VideoMode(windowSize.x, windowSize.y), "Ping-pong", sf::Style::Close | sf::Style::Titlebar);
 
 	while (mainRenderWindow.isOpen())
 	{
@@ -46,6 +54,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdsh
 		{
 			if (event.type == sf::Event::Closed)
 				mainRenderWindow.close();
+
+			if (event.type == sf::Event::LostFocus)
+				keyboardHandler.resetPressedKeys();
 
 			if (event.type == sf::Event::KeyPressed)
 				keyboardHandler.pushKey(event.key.code);
@@ -85,6 +96,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdsh
 			case EGameState::JoiningToHost:
 				handleWaitingForConnectionMenu(waitingForConnectionMenu.userInput(event));
 				break;
+			case EGameState::SETTINGS:
+				handleOptionsMenu(optionsMenu.userInput(event));
+				break;
 			default:
 				break;
 			}
@@ -100,7 +114,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdsh
 		case EGameState::InGame:
 			gameState.applyGameStateChange();
 			pong->GameUpdate();
-			pong->Render();
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			pong->Render(scale);
 			break;
 		case EGameState::InMultiplayer:
 			gameState.applyGameStateChange();
@@ -113,7 +128,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdsh
 				pong->sendData();
 			else
 				pong->receiveData();
-			pong->Render();
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			pong->Render(scale);
 			break;
 		case EGameState::Menu:
 			mainMenu.update();
@@ -205,6 +221,10 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdsh
 			waitingForConnectionMenu.update();
 			mainRenderWindow.clear(sf::Color(20, 160, 132));
 			waitingForConnectionMenu.draw();
+			break;
+		case EGameState::SETTINGS:
+			mainRenderWindow.clear(sf::Color(20, 160, 132));
+			optionsMenu.draw();
 			break;
 		default:
 			break;

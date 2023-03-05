@@ -11,6 +11,7 @@
 #include "GameStates.h"
 #include "WindowInputHandlers.h"
 #include "Network.h"
+#include "ScreenResolutions.h"
 
 extern sf::RenderWindow mainRenderWindow;
 extern sf::Font font;
@@ -35,7 +36,7 @@ protected:
 	sf::Clock clock;
 	float timer = 0;
 	const float platformSpeed = 400.f;
-	float ballSpeed = 350.f;
+	float ballSpeed = 400.f;
 	Objects2D::Platform firstPlatform, secondPlatform;
 	Objects2D::Ball ball;
 	Physics2D::Physics physics;
@@ -43,6 +44,7 @@ protected:
 	sf::CircleShape fieldCenterCircle;
 	sf::Vertex line[2];
 	std::string data;
+	bool isSizeScaled = false;
 
 public:
 	const uint8_t _playerID;
@@ -59,8 +61,7 @@ public:
 	virtual void sendData() {}
 	virtual void receiveData() {}
 	virtual void GameUpdate();
-	void Render();
-
+	void Render(Points2D::Point2D scale);
 };
 
 class PongHost : public Pong
@@ -84,3 +85,4 @@ public:
 	void receiveData() override;
 	void UserInput() override;
 };
+

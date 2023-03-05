@@ -5,16 +5,23 @@ GUI::Menu pauseMenu;
 GUI::Menu multiplayerMenu;
 GUI::Menu connectMenu;
 GUI::Menu waitingForConnectionMenu;
+GUI::Menu optionsMenu;
 sf::Texture loadingImage;
+sf::Texture arrow;
+uint8_t currentResolutionIndex = 0;
+uint8_t prevResolutionIndex = 0;
+
+constexpr uint8_t resolutionCount = sizeof(resolutionList) / sizeof(resolutionList[0]);
 
 void initMainMenu()
 {
 	mainMenu.renderWindow = &mainRenderWindow;
 	mainMenu.loadFont(&font);
 
-	mainMenu.addLabel("PONG", { 0.f, 100.f }, { 200, 50 }, static_cast<GUI::ElementID>(MainMenuElements::PONG_TITLE));
-	mainMenu.addButton("1 vs 1", { 0.f, 200.f }, { 200.f, 50.f }, static_cast<GUI::ElementID>(MainMenuElements::PVP));
-	mainMenu.addButton("Multiplayer", { 0.f, 270.f }, { 200.f, 50.f }, static_cast<GUI::ElementID>(MainMenuElements::MULTIPLAYER));
+	mainMenu.addLabel("PONG", { 0.f, 90.f }, { 200, 50 }, static_cast<GUI::ElementID>(MainMenuElements::PONG_TITLE));
+	mainMenu.addButton("1 vs 1", { 0.f, 160.f }, { 200.f, 50.f }, static_cast<GUI::ElementID>(MainMenuElements::PVP));
+	mainMenu.addButton("Multiplayer", { 0.f, 220.f }, { 200.f, 50.f }, static_cast<GUI::ElementID>(MainMenuElements::MULTIPLAYER));
+	mainMenu.addButton("Settings", { 0.f, 280.f }, { 200.f, 50.f }, static_cast<GUI::ElementID>(MainMenuElements::SETTINGS));
 	mainMenu.addButton("Exit", { 0.f, 340.f }, { 200.f, 50.f }, static_cast<GUI::ElementID>(MainMenuElements::EXIT));
 	
 	mainMenu.alignElementsCenter(windowSize);
@@ -25,6 +32,8 @@ void initMainMenu()
 	GUI::Button* button = (GUI::Button*)mainMenu.getElementByID(static_cast<GUI::ElementID>(MainMenuElements::PVP));
 	button->setInteractiveColors(sf::Color::Green, sf::Color::Red);
 	button = (GUI::Button*)mainMenu.getElementByID(static_cast<GUI::ElementID>(MainMenuElements::MULTIPLAYER));
+	button->setInteractiveColors(sf::Color::Green, sf::Color::Red);
+	button = (GUI::Button*)mainMenu.getElementByID(static_cast<GUI::ElementID>(MainMenuElements::SETTINGS));
 	button->setInteractiveColors(sf::Color::Green, sf::Color::Red);
 	button = (GUI::Button*)mainMenu.getElementByID(static_cast<GUI::ElementID>(MainMenuElements::EXIT));
 	button->setInteractiveColors(sf::Color::Green, sf::Color::Red);
@@ -100,7 +109,7 @@ void initWaitingForConnectionMenu()
 	waitingForConnectionMenu.addButton("Cancel", { 0.f, 270.f }, { 200.f, 50.f }, static_cast<GUI::ElementID>(WaitingForConnectionMenu::Cancel));
 
 	waitingForConnectionMenu.alignElementsCenter(windowSize);
-	waitingForConnectionMenu.addImageBox({ 300.f, 200.f }, loadingImage, static_cast<GUI::ElementID>(WaitingForConnectionMenu::LoadingCircle));
+	waitingForConnectionMenu.addImageBox({ 400.f, 200.f }, loadingImage, static_cast<GUI::ElementID>(WaitingForConnectionMenu::LoadingCircle));
 
 	GUI::ImageGUIelement* img = (GUI::ImageGUIelement*)waitingForConnectionMenu.getElementByID(static_cast<GUI::ElementID>(WaitingForConnectionMenu::LoadingCircle));
 	img->setScale(0.7f, 0.7f);
@@ -110,6 +119,37 @@ void initWaitingForConnectionMenu()
 	label->setColor(sf::Color(20, 160, 132), sf::Color(20, 160, 132));
 
 	GUI::Button* button = (GUI::Button*)waitingForConnectionMenu.getElementByID(static_cast<GUI::ElementID>(WaitingForConnectionMenu::Cancel));
+	button->setInteractiveColors(sf::Color::Green, sf::Color::Red);
+}
+
+void initOptionsMenu()
+{
+	optionsMenu.renderWindow = &mainRenderWindow;
+	optionsMenu.loadFont(&font);
+	arrow.loadFromFile("Misc\\left-arrow.png");
+	
+	optionsMenu.addLabel("Resolution", { 300, 130 }, {150, 50}, (GUI::ElementID)SettingsMenu::Title);
+	optionsMenu.addLabel(resolutionList[0].first, { 350, 190 }, {200, 50}, (GUI::ElementID)SettingsMenu::ScreenRes);
+	optionsMenu.addButton("Apply", { 300, 250 }, {100, 50}, (GUI::ElementID)SettingsMenu::Apply);
+	optionsMenu.addButton("Back", { 300, 310 }, {100, 50}, (GUI::ElementID)SettingsMenu::RETURN_TO_MENU);
+	optionsMenu.alignElementsCenter(windowSize);
+
+	optionsMenu.addImageButton({ 260, 215 }, arrow, (GUI::ElementID)SettingsMenu::ArrowLeft);
+	optionsMenu.addImageButton({ 540, 215 }, arrow, (GUI::ElementID)SettingsMenu::ArrowRight);
+
+	GUI::Label* label = (GUI::Label*)optionsMenu.getElementByID(0);
+	label->setColor(sf::Color(20, 160, 132), sf::Color(20, 160, 132));
+
+	GUI::ImageButton* guiArrow = (GUI::ImageButton*)optionsMenu.getElementByID(1);
+	guiArrow->setScale(0.5, 0.5);
+	
+	guiArrow = (GUI::ImageButton*)optionsMenu.getElementByID(2);
+	guiArrow->rotate(180);
+	guiArrow->setScale(0.5, 0.5);
+
+	GUI::Button* button = (GUI::Button*)optionsMenu.getElementByID(4);
+	button->setInteractiveColors(sf::Color::Green, sf::Color::Red);
+	button = (GUI::Button*)optionsMenu.getElementByID(5);
 	button->setInteractiveColors(sf::Color::Green, sf::Color::Red);
 }
 
@@ -125,6 +165,9 @@ void handleMainMenuInput(GUI::ElementID elementID)
 		break;
 	case MainMenuElements::MULTIPLAYER:
 		gameState.setImmediately(EGameState::MultiplayerMenu);
+		break;
+	case MainMenuElements::SETTINGS:
+		gameState.setImmediately(EGameState::SETTINGS);
 		break;
 	case MainMenuElements::EXIT:
 		if (network != nullptr)
@@ -276,3 +319,67 @@ void handleWaitingForConnectionMenu(GUI::ElementID elementID)
 	}
 }
 
+void handleOptionsMenu(GUI::ElementID elementID)
+{
+	SettingsMenu _elementID = (SettingsMenu)elementID;
+	GUI::Label* label = (GUI::Label*)optionsMenu.getElementByID((GUI::ElementID)SettingsMenu::ScreenRes);
+
+	switch (_elementID)
+	{
+	case SettingsMenu::ArrowLeft:
+		currentResolutionIndex == 0 ? currentResolutionIndex = resolutionCount - 1 : currentResolutionIndex--;
+		label->setText(resolutionList[currentResolutionIndex].first);
+		break;
+	case SettingsMenu::ArrowRight:
+		currentResolutionIndex == resolutionCount - 1 ? currentResolutionIndex = 0 : currentResolutionIndex++;
+		label->setText(resolutionList[currentResolutionIndex].first);
+		break;
+	case SettingsMenu::Apply:
+		if (currentResolutionIndex == prevResolutionIndex)
+			return;
+		mainRenderWindow.setSize({ resolutionList[currentResolutionIndex].second.x, resolutionList[currentResolutionIndex].second.y });
+		mainRenderWindow.setView(sf::View(sf::FloatRect(0, 0, resolutionList[currentResolutionIndex].second.x, resolutionList[currentResolutionIndex].second.y)));
+		scale = { 
+			(float)resolutionList[currentResolutionIndex].second.x / resolutionList[0].second.x,
+			(float)resolutionList[currentResolutionIndex].second.y / resolutionList[0].second.y
+		};
+		windowSize.x = resolutionList[currentResolutionIndex].second.x;
+		windowSize.y = resolutionList[currentResolutionIndex].second.y;
+		resize();
+		break;
+	case SettingsMenu::RETURN_TO_MENU:
+		gameState.setImmediately(EGameState::Menu);
+		break;
+	default:
+		break;
+	}
+}
+
+void resize()
+{
+	uint8_t prevIndex = prevResolutionIndex;
+	prevResolutionIndex = currentResolutionIndex;
+
+	float scaleX = 1;
+	float scaleY = 1;
+
+	if (currentResolutionIndex > prevIndex)
+		for (uint8_t i = prevIndex; i < currentResolutionIndex; i++)
+		{
+			scaleX *= (float)resolutionList[i + 1].second.x / resolutionList[i].second.x;
+			scaleY *= (float)resolutionList[i + 1].second.y / resolutionList[i].second.y;
+		}
+	else
+		for (uint8_t i = prevIndex; i > currentResolutionIndex; i--)
+		{
+			scaleX *= (float)resolutionList[i - 1].second.x / resolutionList[i].second.x;
+			scaleY *= (float)resolutionList[i - 1].second.y / resolutionList[i].second.y;
+		}
+
+	mainMenu.setScale(scaleX, scaleY);
+	multiplayerMenu.setScale(scaleX, scaleY);
+	connectMenu.setScale(scaleX, scaleY);
+	waitingForConnectionMenu.setScale(scaleX, scaleY);
+	pauseMenu.setScale(scaleX, scaleY);
+	optionsMenu.setScale(scaleX, scaleY);
+}

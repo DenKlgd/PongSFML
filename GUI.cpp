@@ -3,10 +3,73 @@
 using namespace GUI;
 using namespace Points2D;
 
-//void GUIelement::setCoords(Points2D::Coords coords)
-//{
-//	this->coords = coords;
-//}
+
+bool GUIelement::getMousePos(sf::Event& event, Points2D::Point2D& mousePos)
+{
+	if (event.type == sf::Event::MouseMoved)
+	{
+		mousePos.x = (float)event.mouseMove.x;
+		mousePos.y = (float)event.mouseMove.y;
+		return true;
+	}
+	else if (event.mouseButton.button == sf::Mouse::Left)
+	{
+		mousePos.x = (float)event.mouseButton.x;
+		mousePos.y = (float)event.mouseButton.y;
+		return true;
+	}
+	return false;
+}
+
+ElementState GUIelement::processEvent(sf::Event& event)
+{
+	sf::FloatRect btnRect;
+
+	if (dynamic_cast<Button*>(this) || dynamic_cast<GUI::InputBox*>(this))
+		btnRect = ((sf::RectangleShape*)drawable)->getGlobalBounds();
+	else if (dynamic_cast<ImageButton*>(this))
+		btnRect = ((sf::Sprite*)drawable)->getGlobalBounds();
+	else
+		return ElementState::NoRedraw;
+
+	Points2D::Point2D mousePos;
+	if (!getMousePos(event, mousePos))
+		return ElementState::NoRedraw;
+
+	if (mousePos.x >= btnRect.left && mousePos.x <= btnRect.left + btnRect.width
+		&&
+		mousePos.y >= btnRect.top && mousePos.y <= btnRect.top + btnRect.height
+		)
+	{
+		if (event.type == sf::Event::MouseMoved && state != ElementState::Active)
+		{
+			state = ElementState::MouseOver;
+			return ElementState::MouseOver;
+		}
+		else if (event.type == sf::Event::MouseButtonPressed)
+		{
+			state = ElementState::Active;
+			return ElementState::Active;
+		}
+		else if (event.type == sf::Event::MouseButtonReleased && state == ElementState::Active)
+		{
+			state = ElementState::MouseOver;
+			return ElementState::Clicked;
+		}
+	}
+	else
+	{
+		if (event.type == sf::Event::MouseButtonReleased
+			||
+			state != ElementState::Active
+			)
+		{
+			state = ElementState::Default;
+			return ElementState::Default;
+		}
+	}
+	return ElementState::NoRedraw;
+}
 
 Coords GUIelement::getCoords()
 {
@@ -30,34 +93,30 @@ bool GUIelement::userInput(sf::Event& event)
 
 ///
 
-void ShapeGUIelement::setCoords(Points2D::Coords coords)
-{
-	this->coords = coords;
-	this->shape->setPosition(coords.x, coords.y);
-}
-
 void ShapeGUIelement::setColor(sf::Color fillColor, sf::Color outlineColor)
 {
 	this->fillColor = fillColor;
 	this->outlineColor = outlineColor;
-	this->shape->setFillColor(fillColor);
-	this->shape->setOutlineColor(outlineColor);
+	((sf::RectangleShape*)drawable)->setFillColor(fillColor);
+	((sf::RectangleShape*)drawable)->setOutlineColor(outlineColor);
 }
 
 ///
 
 void ImageGUIelement::calcSize()
 {
-	sf::FloatRect rect = _sprite.getLocalBounds();
+	sf::Sprite* sprite = (sf::Sprite*)drawable;
+	sf::FloatRect rect = sprite->getLocalBounds();
 	size = { rect.width, rect.height };
-	_sprite.setOrigin(size.x / 2.f, size.y / 2.f);
+	sprite->setOrigin(size.x / 2.f, size.y / 2.f);
 }
 
 void ImageGUIelement::setCoords(Points2D::Coords coords)
 {
 	this->coords = coords;
-	_sprite.setOrigin(0, 0);
-	_sprite.setPosition(coords.x, coords.y);
+	sf::Sprite* sprite = (sf::Sprite*)drawable;
+	sprite->setOrigin(0, 0);
+	sprite->setPosition(coords.x, coords.y);
 	calcSize();
 }
 
@@ -68,8 +127,13 @@ void ImageGUIelement::setSize(Points2D::Size size)
 
 void ImageGUIelement::setSpriteTexture(sf::Texture& texture)
 {
-	_sprite.setTexture(texture);
+	((sf::Sprite*)drawable)->setTexture(texture);
 	calcSize();
+}
+
+void ImageGUIelement::rotate(float angle)
+{
+	((sf::Sprite*)drawable)->rotate(angle);
 }
 
 void ImageGUIelement::setRotation(float rotationAngle)
@@ -79,12 +143,13 @@ void ImageGUIelement::setRotation(float rotationAngle)
 
 void ImageGUIelement::setScale(float x, float y)
 {
-	_sprite.setScale(x, y);
+	((sf::Sprite*)drawable)->setScale(x, y);
+	calcSize();
 }
 
 void ImageGUIelement::draw(sf::RenderWindow& renderWindow)
 {
-	renderWindow.draw(_sprite);
+	renderWindow.draw(*((sf::Sprite*)drawable));
 }
 
 void ImageGUIelement::update()
@@ -92,34 +157,52 @@ void ImageGUIelement::update()
 	if (_timer.getElapsedTime().asMilliseconds() <= 25)
 		return;
 
-	_sprite.rotate(_rotationAngle);
+	((sf::Sprite*)drawable)->rotate(_rotationAngle);
 	_timer.restart();
+}
+
+void ImageGUIelement::rescale(float scaleX, float scaleY)
+{
+	this->coords.x *= scaleX;
+	this->coords.y *= scaleY;
+	sf::Vector2f scale = ((sf::Sprite*)drawable)->getScale();
+	scale.x *= scaleX;
+	scale.y *= scaleY;
+	((sf::Sprite*)drawable)->setScale(scale.x, scale.x);
+	this->setCoords(this->coords);
 }
 
 ImageGUIelement::ImageGUIelement()
 {
 	type = ElementType::IMAGEBOX;
+	drawable = new sf::Sprite;
+}
+
+ImageGUIelement::~ImageGUIelement()
+{
+	delete drawable;
+	drawable = nullptr;
 }
 
 /// 
 
 void Label::alignText()
 {
-	float centeredX = (coords.x + size.x / 2) - (text.getString().getSize() * text.getCharacterSize() / 5);
+	float centeredX = (coords.x + size.x / 2) - (text.getLocalBounds().width / 2);
 	text.setPosition(centeredX, coords.y);
 }
 
 void Label::setCoords(Points2D::Coords coords)
 {
 	this->coords = coords;
-	this->shape->setPosition(coords.x, coords.y);
+	((sf::RectangleShape*)drawable)->setPosition(coords.x, coords.y);
 	alignText();
 }
 
 void Label::setSize(Points2D::Size size)
 {
 	this->size = size;
-	dynamic_cast<sf::RectangleShape*>(this->shape)->setSize({size.x, size.y});
+	((sf::RectangleShape*)drawable)->setSize({size.x, size.y});
 	this->alignText();
 }
 
@@ -145,7 +228,7 @@ bool Label::setFont(sf::Font* font)
 
 void Label::draw(sf::RenderWindow& renderWindow)
 {
-	renderWindow.draw(*shape);
+	renderWindow.draw(*((sf::RectangleShape*)drawable));
 	renderWindow.draw(text);
 }
 
@@ -154,11 +237,23 @@ bool Label::userInput(sf::Event& event)
 	return false;
 }
 
+void Label::rescale(float scaleX, float scaleY)
+{
+	this->coords.x *= scaleX;
+	this->coords.y *= scaleY;
+	this->size.x *= scaleX;
+	this->size.y *= scaleY;
+	((sf::RectangleShape*)drawable)->setPosition(coords.x, coords.y);
+	((sf::RectangleShape*)drawable)->setSize({ size.x, size.y });
+	text.setCharacterSize(text.getCharacterSize() * scaleX);
+	alignText();
+}
+
 Label::Label()
 {
 	type = ElementType::LABEL;
-	shape = new sf::RectangleShape;
-	sf::RectangleShape* rect = dynamic_cast<sf::RectangleShape*>(shape);
+	drawable = new sf::RectangleShape;
+	sf::RectangleShape* rect = dynamic_cast<sf::RectangleShape*>(drawable);
 	rect->setPosition(coords.x, coords.y);
 	rect->setSize({ size.x, size.y });
 	rect->setFillColor(fillColor);
@@ -169,8 +264,8 @@ Label::Label()
 
 Label::~Label()
 {
-	delete dynamic_cast<sf::RectangleShape*>(shape);
-	shape = nullptr;
+	delete ((sf::RectangleShape*)drawable);
+	drawable = nullptr;
 }
 
 ///
@@ -183,60 +278,26 @@ void Button::setInteractiveColors(sf::Color mouseOverColor, sf::Color mousePress
 
 bool Button::userInput(sf::Event& event)
 {
-	Points2D::Point2D mousePos;
-	if (event.type == sf::Event::MouseMoved)
-	{
-		mousePos.x = (float)event.mouseMove.x;
-		mousePos.y = (float)event.mouseMove.y;
-	}
-	else if (event.mouseButton.button == sf::Mouse::Left)
-	{
-		mousePos.x = (float)event.mouseButton.x;
-		mousePos.y = (float)event.mouseButton.y;
-	}
-	else
-		return false;
+	ElementState state = processEvent(event);
 
-	if (mousePos.x >= coords.x && mousePos.x <= coords.x + size.x
-		&&
-		mousePos.y >= coords.y && mousePos.y <= coords.y + size.y
-	)
+	switch (state)
 	{
-		if (event.type == sf::Event::MouseMoved && state != ElementState::Active)
-		{
-			if (state == ElementState::MouseOver)
-				return false;
-			state = ElementState::MouseOver;
-			shape->setFillColor(mouseOverColor);
-		}
-		else if (event.type == sf::Event::MouseButtonPressed)
-		{
-			if (state == ElementState::Active)
-				return false;
-			state = ElementState::Active;
-			shape->setFillColor(mousePressedColor);
-		}
-		else if (event.type == sf::Event::MouseButtonReleased && state == ElementState::Active)
-		{
-			if (state == ElementState::MouseOver)
-				return true;
-			state = ElementState::MouseOver;
-			shape->setFillColor(mouseOverColor);
-			return true;
-		}
-	}
-	else
-	{
-		if (event.type == sf::Event::MouseButtonReleased
-			||
-			state != ElementState::Active
-		)
-		{
-			if (state == ElementState::Default)
-				return false;
-			state = ElementState::Default;
-			shape->setFillColor(fillColor);
-		}
+	case GUI::ElementState::NoRedraw:
+		return false;
+	case GUI::ElementState::Default:
+		((sf::RectangleShape*)drawable)->setFillColor(fillColor);
+		break;
+	case GUI::ElementState::MouseOver:
+		((sf::RectangleShape*)drawable)->setFillColor(mouseOverColor);
+		break;
+	case GUI::ElementState::Active:
+		((sf::RectangleShape*)drawable)->setFillColor(mousePressedColor);
+		break;
+	case GUI::ElementState::Clicked:
+		((sf::RectangleShape*)drawable)->setFillColor(mouseOverColor);
+		return true;
+	default:
+		break;
 	}
 	return false;
 }
@@ -244,6 +305,80 @@ bool Button::userInput(sf::Event& event)
 Button::Button()
 {
 	type = ElementType::BUTTON;
+}
+
+///
+
+void ImageButton::calcSize()
+{
+	(*this).ImageGUIelement::calcSize();
+	frame.setSize({ size.x + 2.f, size.y + 2.f });
+}
+
+void ImageButton::setCoords(Points2D::Coords coords)
+{
+	(*this).ImageGUIelement::setCoords(coords);
+	calcSize();
+	frame.setSize({ size.x + 2.f, size.y + 2.f });
+	frame.setPosition({ coords.x - 1.f, coords.y - 1.f});
+}
+
+void ImageButton::setScale(float x, float y)
+{
+	((sf::Sprite*)drawable)->setScale(x, y);
+	frame.setScale(x, y);
+	frame.setPosition(((sf::Sprite*)drawable)->getGlobalBounds().left - 1.f, ((sf::Sprite*)drawable)->getGlobalBounds().top - 1.f);
+	calcSize();
+}
+
+bool ImageButton::userInput(sf::Event& event)
+{
+	ElementState state = processEvent(event);
+
+	switch (state)
+	{
+	case GUI::ElementState::NoRedraw:
+		return false;
+	case GUI::ElementState::Default:
+		frame.setOutlineThickness(0);
+		break;
+	case GUI::ElementState::MouseOver:
+		frame.setOutlineThickness(2);
+		break;
+	case GUI::ElementState::Active:
+		frame.setOutlineThickness(4);
+		break;
+	case GUI::ElementState::Clicked:
+		frame.setOutlineThickness(2);
+		return true;
+	default:
+		break;
+	}
+	return false;
+}
+
+void ImageButton::draw(sf::RenderWindow& renderWindow)
+{
+	renderWindow.draw(*drawable);
+	renderWindow.draw(frame);
+}
+
+void ImageButton::rescale(float scaleX, float scaleY)
+{
+	coords.x *= scaleX; coords.y *= scaleY;
+	((sf::Sprite*)drawable)->setPosition({ coords.x, coords.y });
+	
+	((sf::Sprite*)drawable)->scale(scaleX, scaleY);
+	frame.scale(scaleX, scaleY);
+
+	frame.setPosition(((sf::Sprite*)drawable)->getGlobalBounds().left - 1.f, ((sf::Sprite*)drawable)->getGlobalBounds().top - 1.f);	
+}
+
+ImageButton::ImageButton()
+{
+	type = ElementType::IMAGEBUTTON;
+	frame.setOutlineColor(sf::Color::Black);
+	frame.setFillColor(sf::Color(0, 0, 0, 0));
 }
 
 ///
@@ -301,7 +436,6 @@ InputBox::InputBox()
 void InputBox::setMaxTextLength(uint16_t maxTextLength)
 {
 	_maxTextLength = maxTextLength;
-	//_textString.resize(maxTextLength);
 }
 
 void InputBox::update()
@@ -313,15 +447,16 @@ bool InputBox::userInput(sf::Event& event)
 {
 	if (state == ElementState::Active && event.type == sf::Event::TextEntered)
 	{
-		removeUnderscore(false);
-
 		if (keyboard->isPressed(sf::Keyboard::Enter))
 		{
 			state = ElementState::Default;
+			((sf::RectangleShape*)drawable)->setOutlineThickness(2);
+			removeUnderscore(true);
 			return false;
 		}
 		else if (keyboard->isPressed(sf::Keyboard::BackSpace))
 		{
+			removeUnderscore(false);
 			if (_textString.length() > 0)
 			{
 				_textString.resize(_textString.length() - 1);
@@ -330,6 +465,8 @@ bool InputBox::userInput(sf::Event& event)
 			}
 			return false;
 		}
+
+		removeUnderscore(false);
 
 		if (_textString.length() >= _maxTextLength)
 			return false;
@@ -341,59 +478,29 @@ bool InputBox::userInput(sf::Event& event)
 		alignText();
 	}
 
-	Points2D::Point2D mousePos;
-	if (event.type == sf::Event::MouseMoved)
+
+	ElementState state = processEvent(event);
+
+	switch (state)
 	{
-		mousePos.x = (float)event.mouseMove.x;
-		mousePos.y = (float)event.mouseMove.y;
-	}
-	else if (event.mouseButton.button == sf::Mouse::Left)
-	{
-		mousePos.x = (float)event.mouseButton.x;
-		mousePos.y = (float)event.mouseButton.y;
-	}
-	else
+	case GUI::ElementState::NoRedraw:
 		return false;
-
-	if (mousePos.x >= coords.x && mousePos.x <= coords.x + size.x
-		&&
-		mousePos.y >= coords.y && mousePos.y <= coords.y + size.y
-	)
-	{
-		if (event.type == sf::Event::MouseMoved && state != ElementState::Active)
-		{
-			if (state == ElementState::MouseOver)
-				return false;
-			state = ElementState::MouseOver;
-			shape->setOutlineThickness(4);
-		}
-		else if (event.type == sf::Event::MouseButtonPressed)
-		{
-			if (state == ElementState::Active)
-				return false;
-			state = ElementState::Active;
-			shape->setOutlineThickness(6);
-		}
-		else if (event.type == sf::Event::MouseButtonReleased && state == ElementState::Active)
-		{
-			_timer.restart();
-			return true;
-		}
+	case GUI::ElementState::Default:
+		((sf::RectangleShape*)drawable)->setOutlineThickness(2);
+		break;
+	case GUI::ElementState::MouseOver:
+		((sf::RectangleShape*)drawable)->setOutlineThickness(4);
+		break;
+	case GUI::ElementState::Active:
+		((sf::RectangleShape*)drawable)->setOutlineThickness(6);
+		break;
+	case GUI::ElementState::Clicked:
+		this->state = GUI::ElementState::Active;
+		_timer.restart();
+		return true;
+	default:
+		break;
 	}
-	else
-	{
-		if (event.type == sf::Event::MouseButtonReleased
-			||
-			state != ElementState::Active
-		)
-		{
-			if (state == ElementState::Default)
-				return false;
-			state = ElementState::Default;
-			shape->setOutlineThickness(2);
-		}
-	}
-
 	return false;
 }
 
@@ -443,6 +550,9 @@ GUIelement* Menu::allocMemory(ElementType type, ElementID elementID)
 	case ElementType::IMAGEBOX:
 		element = new ImageGUIelement;
 		break;
+	case ElementType::IMAGEBUTTON:
+		element = new ImageButton;
+		break;
 	default:
 		return nullptr;
 	}
@@ -453,11 +563,6 @@ GUIelement* Menu::allocMemory(ElementType type, ElementID elementID)
 
 	menuElements.push_back(menuElement);
 	return element;
-}
-
-Menu::Menu() 
-{
-
 }
 
 bool Menu::loadFont(sf::Font* font)
@@ -535,6 +640,19 @@ bool Menu::addImageBox(Points2D::Coords coords, sf::Texture& texture, ElementID 
 	return true;
 }
 
+bool Menu::addImageButton(Points2D::Coords coords, sf::Texture& texture, ElementID elementID)
+{
+	ImageGUIelement* imageButton = (ImageGUIelement*)allocMemory(ElementType::IMAGEBUTTON, elementID);
+
+	if (imageButton == nullptr)
+		return false;
+
+	imageButton->setCoords(coords);
+	imageButton->setSpriteTexture(texture);
+
+	return true;
+}
+
 bool Menu::removeElement(ElementID elementID)
 {
 	std::vector<MenuElement>::iterator iterEnd = menuElements.end();
@@ -562,6 +680,16 @@ void Menu::alignElementsCenter(sf::Vector2u windowSize)
 		Size objSize = iter->guiElement->getSize();
 		Coords objCoords = iter->guiElement->getCoords();
 		iter->guiElement->setCoords({baseCoords.x - objSize.x / 2, objCoords.y});
+		++iter;
+	}
+}
+
+void Menu::setScale(float scaleX, float scaleY)
+{
+	std::vector<MenuElement>::iterator iter = menuElements.begin();
+	while (iter != menuElements.end())
+	{
+		iter->guiElement->rescale(scaleX, scaleY);
 		++iter;
 	}
 }

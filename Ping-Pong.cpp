@@ -13,32 +13,37 @@ Pong::Pong(uint8_t playerID)
 {
     srand(time(0));
 
-    //windowSize = mainRenderWindow.getSize();
-    //font.loadFromFile("Nautilus.otf");
+    Points2D::Point2D buff;
+    buff.x = 25.f;
+    buff.y = 100.f;
 
-    firstPlatform = Objects2D::Platform({ 0. + BorderThickness, 0. + BorderThickness }, { 25., 100. }, sf::Color::White);
-    secondPlatform = Objects2D::Platform({ 600.f - 25.f - BorderThickness, 0. + BorderThickness }, { 25., 100. }, sf::Color::White);
-    ball = Objects2D::Ball({ 300, 300 }, 10.f, sf::Color::Yellow);
+    firstPlatform = Objects2D::Platform({0.f + BorderThickness, 0.f + BorderThickness}, buff, sf::Color::White);
+
+    secondPlatform = Objects2D::Platform({ resolutionList[0].second.x - 25.f - BorderThickness, 0.f + BorderThickness}, buff, sf::Color::White);
+    
+    buff.x = resolutionList[0].second.x / 2 - 10.f / 2;
+    buff.y = resolutionList[0].second.y / 2 - 10.f / 2;
+    ball = Objects2D::Ball(buff, 10.f, sf::Color::Yellow);
     physics = Physics2D::Physics();
 
     playerScore.initScore();
     physics.randomizeBallAngle(ball);
 
     playerScore = PlayerScoreGUI(&font, 32, sf::Color::White);
-    playerScore.firstPlayerScoreText.setPosition(sf::Vector2f(180.f, 0.f));
-    playerScore.secondPlayerScoreText.setPosition(sf::Vector2f(420.f, 0.f));
+    playerScore.firstPlayerScoreText.setPosition(sf::Vector2f(330.f, 0.f));
+    playerScore.secondPlayerScoreText.setPosition(sf::Vector2f(460.f, 0.f));
 
-    leftFieldSide.setSize(sf::Vector2f(windowSize.x / 2, windowSize.y));
+    leftFieldSide.setSize(sf::Vector2f(resolutionList[0].second.x / 2, resolutionList[0].second.y));
     leftFieldSide.setFillColor(sf::Color(20, 160, 132));
     leftFieldSide.setPosition(sf::Vector2f(0.f, 0.f));
 
-    rightFieldSide.setSize(sf::Vector2f(windowSize.x / 2, windowSize.y));
+    rightFieldSide.setSize(sf::Vector2f(resolutionList[0].second.x / 2, resolutionList[0].second.y));
     rightFieldSide.setFillColor(sf::Color(38, 185, 153));
-    rightFieldSide.setPosition(sf::Vector2f(windowSize.x / 2, 0.f));
+    rightFieldSide.setPosition(sf::Vector2f(resolutionList[0].second.x / 2, 0.f));
 
     fieldCenterCircle.setRadius(50.f);
     fieldCenterCircle.setOrigin(sf::Vector2f(50.f, 50.f));
-    fieldCenterCircle.setPosition(sf::Vector2f(windowSize.x / 2, windowSize.y / 2));
+    fieldCenterCircle.setPosition(sf::Vector2f(resolutionList[0].second.x / 2, resolutionList[0].second.y / 2));
     fieldCenterCircle.setFillColor(sf::Color(255, 255, 255, 128));
 
     //unsigned short lineCount = windowSize.y / 20;
@@ -48,13 +53,19 @@ Pong::Pong(uint8_t playerID)
 
 void Pong::initGame()
 {
+    Points2D::Point2D buff;
+    buff.x = resolutionList[0].second.x / 2 - 10.f / 2;
+    buff.y = resolutionList[0].second.y / 2 - 10.f / 2;
+
     firstPlatform.setCoords({ 0. + BorderThickness, 0. + BorderThickness });
-    secondPlatform.setCoords({ 600.f - 25.f - BorderThickness, 0. + BorderThickness });
-    ball.setCoords({ 300, 300 });
+    secondPlatform.setCoords({ resolutionList[0].second.x - 25.f - BorderThickness, 0.f + BorderThickness });
+    ball.setCoords(buff);
     playerScore.initScore();
     physics.randomizeBallAngle(ball);
     firstPlatform.setSpeed({0, 0});
     secondPlatform.setSpeed({0, 0});
+    isSizeScaled = false;
+
     clock.restart();
 }
 
@@ -84,14 +95,14 @@ void Pong::UserInput()
     if (keyboardHandler.isPressed(sf::Keyboard::Enter))
         physics.randomizeBallAngle(ball);
 
-    if (keyboardHandler.isPressed(sf::Keyboard::Num1))
+    /*if (keyboardHandler.isPressed(sf::Keyboard::Num1))
         ballSpeed = 50.f;
     else if (keyboardHandler.isPressed(sf::Keyboard::Num2))
         ballSpeed = 150.f;
     else if (keyboardHandler.isPressed(sf::Keyboard::Num3))
         ballSpeed = 250.f;
     else if (keyboardHandler.isPressed(sf::Keyboard::Num4))
-        ballSpeed = 350.f;
+        ballSpeed = 350.f;*/
 
     if (keyboardHandler.isPressed(sf::Keyboard::W))
         firstPlatform.setSpeed({ 0.f, -1.f });
@@ -114,37 +125,69 @@ void Pong::GameUpdate()
 {
     timer = clock.restart().asSeconds();
 
-    //if (mainRenderWindow.hasFocus())
-    //{
-        BORDER collisionBorder = BORDER_NONE;
+    BORDER collisionBorder = BORDER_NONE;
 
-        collisionBorder = physics.resolveWindowFrameToObjectCollisions(firstPlatform, { static_cast<float>(windowSize.x), static_cast<float>(windowSize.y) });
-        if (collisionBorder == BORDER_TOP || collisionBorder == BORDER_BOTTOM)
-            firstPlatform.setSpeed({ 0.f, 0.f });
+    collisionBorder = physics.resolveWindowFrameToObjectCollisions(firstPlatform, { static_cast<float>(resolutionList[0].second.x), static_cast<float>(resolutionList[0].second.y) });
+    if (collisionBorder == BORDER_TOP || collisionBorder == BORDER_BOTTOM)
+        firstPlatform.setSpeed({ 0.f, 0.f });
 
 
-        collisionBorder = physics.resolveWindowFrameToObjectCollisions(secondPlatform, { static_cast<float>(windowSize.x), static_cast<float>(windowSize.y) });
-        if (collisionBorder == BORDER_TOP || collisionBorder == BORDER_BOTTOM)
-            secondPlatform.setSpeed({ 0.f, 0.f });
+    collisionBorder = physics.resolveWindowFrameToObjectCollisions(secondPlatform, { static_cast<float>(resolutionList[0].second.x), static_cast<float>(resolutionList[0].second.y) });
+    if (collisionBorder == BORDER_TOP || collisionBorder == BORDER_BOTTOM)
+        secondPlatform.setSpeed({ 0.f, 0.f });
 
-        collisionBorder = physics.resolveWindowFrameToObjectCollisions(ball, { static_cast<float>(windowSize.x), static_cast<float>(windowSize.y) });
-        ballBorderHit(collisionBorder);
+    collisionBorder = physics.resolveWindowFrameToObjectCollisions(ball, { static_cast<float>(resolutionList[0].second.x), static_cast<float>(resolutionList[0].second.y) });
+    ballBorderHit(collisionBorder);
 
-        physics.resolveBallToPlatformCollisions(ball, firstPlatform);
-        physics.resolveBallToPlatformCollisions(ball, secondPlatform);
+    physics.resolveBallToPlatformCollisions(ball, firstPlatform);
+    physics.resolveBallToPlatformCollisions(ball, secondPlatform);
 
-        physics.moveObject(firstPlatform, platformSpeed, timer);
-        physics.moveObject(secondPlatform, platformSpeed, timer);
-        physics.moveObject(ball, ballSpeed, timer);
+    physics.moveObject(firstPlatform, platformSpeed, timer);
+    physics.moveObject(secondPlatform, platformSpeed, timer);
+    physics.moveObject(ball, ballSpeed, timer);
         
-        if (ballSpeed < 600.f)
-            ballSpeed += 0.002;
-    //}
+    if (ballSpeed < 700.f)
+        ballSpeed += 20.f * timer;
 }
 
-void Pong::Render()
+void Pong::Render(Points2D::Point2D scale)
 {
-    //mainRenderWindow.clear(sf::Color(20, 160, 132));
+    if (!isSizeScaled)
+    {
+        isSizeScaled = true;
+
+        leftFieldSide.setSize({windowSize.x / 2.f, windowSize.y / 2.f});
+        rightFieldSide.setSize({ windowSize.x / 2.f, (float)windowSize.y });
+        rightFieldSide.setPosition(windowSize.x / 2.f, 0);
+
+        fieldCenterCircle.setRadius(50.f * scale.x);
+        fieldCenterCircle.setOrigin({ 50.f * scale.x, 50.f * scale.x });
+        fieldCenterCircle.setPosition(sf::Vector2f(windowSize.x / 2.f, windowSize.y / 2.f));
+
+        sf::Shape* shape = &firstPlatform.getShape();
+        ((sf::RectangleShape*)shape)->setSize({ firstPlatform.getSize().x * scale.x, firstPlatform.getSize().y * scale.y });
+
+        shape = &secondPlatform.getShape();
+        ((sf::RectangleShape*)shape)->setSize({ secondPlatform.getSize().x * scale.x, secondPlatform.getSize().y * scale.y });
+
+        shape = &ball.getShape();
+        ((sf::CircleShape*)shape)->setRadius(ball.getSize().x / 2.f * scale.x);
+
+        playerScore.firstPlayerScoreText.setPosition(sf::Vector2f(330.f * scale.x, 0.f * scale.y));
+        playerScore.secondPlayerScoreText.setPosition(sf::Vector2f(460.f * scale.x, 0.f * scale.y));
+        playerScore.firstPlayerScoreText.setCharacterSize(32 * scale.x);
+        playerScore.secondPlayerScoreText.setCharacterSize(32 * scale.x);
+    }
+
+    sf::Shape* shape = &firstPlatform.getShape();
+    ((sf::RectangleShape*)shape)->setPosition({ firstPlatform.getCoords().x * scale.x, firstPlatform.getCoords().y * scale.y });
+
+    shape = &secondPlatform.getShape();
+    ((sf::RectangleShape*)shape)->setPosition({ secondPlatform.getCoords().x * scale.x, secondPlatform.getCoords().y * scale.y });
+
+    shape = &ball.getShape();
+    ((sf::CircleShape*)shape)->setPosition({ ball.getCoords().x * scale.x, ball.getCoords().y * scale.y });
+
     mainRenderWindow.draw(leftFieldSide);
     mainRenderWindow.draw(rightFieldSide);
     mainRenderWindow.draw(fieldCenterCircle);
@@ -161,8 +204,6 @@ void Pong::Render()
     mainRenderWindow.draw(ball.getShape());
     mainRenderWindow.draw(playerScore.firstPlayerScoreText);
     mainRenderWindow.draw(playerScore.secondPlayerScoreText);
-
-    //mainRenderWindow.display();
 }
 
 ///

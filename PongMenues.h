@@ -7,12 +7,14 @@
 #include "GUI.h"
 #include "Network.h"
 #include "Connection.h"
+#include "ScreenResolutions.h"
 
 enum class MainMenuElements : unsigned char
 {
 	PONG_TITLE,
 	PVP,
 	MULTIPLAYER,
+	SETTINGS,
 	EXIT,
 };
 
@@ -43,6 +45,16 @@ enum class WaitingForConnectionMenu : unsigned char
 	Cancel,
 };
 
+enum class SettingsMenu : unsigned char
+{
+	Title,
+	ArrowLeft,
+	ArrowRight,
+	ScreenRes,
+	Apply,
+	RETURN_TO_MENU,
+};
+
 extern sf::RenderWindow mainRenderWindow;
 extern sf::Font font;
 extern sf::Vector2u windowSize;
@@ -54,21 +66,26 @@ extern GUI::Menu pauseMenu;
 extern GUI::Menu multiplayerMenu;
 extern GUI::Menu connectMenu;
 extern GUI::Menu waitingForConnectionMenu;
+extern GUI::Menu optionsMenu;
 extern Pong* pong;
 extern TCPnetwork::TCP_Base* network;
 extern sf::UdpSocket udpSock;
 extern sf::IpAddress remoteIP, remoteIPbuffer;
 extern uint16_t port;
 extern ConnectionStatus connectionStatus;
+extern Points2D::Point2D scale;
 
 void initMainMenu();
 void initPauseMenu();
 void initConnectMenu();
 void initMultiplayerMenu();
 void initWaitingForConnectionMenu();
+void initOptionsMenu();
 void handleMainMenuInput(GUI::ElementID elementID);
 void handlePauseMenuInput(GUI::ElementID elementID);
 void handleConnectMenuInput(GUI::ElementID elementID);
 void handleMultiplayerMenuInput(GUI::ElementID elementID);
 void handleWaitingForConnectionMenu(GUI::ElementID elementID);
+void handleOptionsMenu(GUI::ElementID elementID);
 void pauseMenuNetworkUpdate();
+void resize();

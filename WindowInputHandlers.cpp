@@ -62,25 +62,12 @@ sf::Keyboard::Key KeyboardInputHandler::getLastKey()
 	return pressedKeys[lastKeyIndex].key;
 }
 
+void KeyboardInputHandler::resetPressedKeys()
+{
+	for (auto& key : pressedKeys)
+		key.isActive = false;
+	lastKeyIndex = 0;
+}
+
 ///
 
-char WindowInputHandlers::mapKeyToChar(sf::Keyboard::Key key)
-{
-	char letter = static_cast<char>(key);
-	if (letter >= 0 && letter <= 25)
-		letter = 'a' + letter;
-	else if (letter >= 26 && letter <= 35)
-	{
-		letter -= 26;
-		letter = '0' + letter;
-	}
-	else if (letter >= 75 && letter <= 84)
-	{
-		letter -= 75;
-		letter = '0' + letter;
-	}
-	else
-		letter = '\0';
-
-	return letter;
-}

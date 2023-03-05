@@ -25,8 +25,6 @@ namespace WindowInputHandlers
 		bool popKey(const sf::Keyboard::Key key);
 		bool isPressed(const sf::Keyboard::Key key);
 		sf::Keyboard::Key getLastKey();
-
+		void resetPressedKeys();
 	};
-
-	char mapKeyToChar(sf::Keyboard::Key);
 }

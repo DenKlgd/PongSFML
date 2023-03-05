@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.8)
 
 project(Ping-Pong)
 
-add_executable(Pong WIN32 
+set(SFML_ROOT "C:/SFML-2.5.1/")
+set(SFML_DIR "${SFML_ROOT}lib/cmake/SFML")
+
+set(PONG_SOURCES 
 			Main.cpp
 			Ping-Pong.cpp
 			Objects2D.cpp
@@ -16,26 +19,21 @@ add_executable(Pong WIN32
 			PongMenues.h 
 			Network.cpp
 			Network.h 
-			PongInput.h 
-			PongInput.cpp
 			GameStates.h
 			GameStates.cpp
 			Connection.h
+			ScreenResolutions.h 
+			ScreenResolutions.cpp
 			)
 
-include_directories(C:/SFML-2.5.1/include)
+if (WIN32)
+	add_executable(Pong WIN32 ${PONG_SOURCES})
+else ()
+	add_executable(Pong ${PONG_SOURCES})
+endif()
 
-#target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-system-d.lib)
-#target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-window-d.lib)
-#target_link_libraries(Pong C:/SFML-2.5.1/lib/freetype.lib)
-#target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-graphics-d.lib)
-#target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-network-d.lib)
+include_directories(${SFML_ROOT}include)
 
-target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-system.lib)
-target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-window.lib)
-target_link_libraries(Pong C:/SFML-2.5.1/lib/freetype.lib)
-target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-graphics.lib)
-target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-network.lib)
+find_package(SFML 2.5 COMPONENTS graphics network REQUIRED)
 
-#target_link_libraries(Pong C:/SFML-2.5.1/lib/openal32.lib)
-#target_link_libraries(Pong C:/SFML-2.5.1/lib/sfml-audio.lib)
+target_link_libraries(Pong sfml-graphics sfml-network)
