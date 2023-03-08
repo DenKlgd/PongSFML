@@ -34,7 +34,7 @@ namespace Objects2D{
 	public:
 		void setSize(Points2D::Size size) override;
 		Platform(Points2D::Coords coords, Points2D::Size platformSize, sf::Color fillColor);
-		void Platform::operator= (Platform&& object);
+		void operator= (Platform&& object);
 		~Platform();
 		Platform();
 	};

@@ -120,7 +120,7 @@ namespace GUI {
 		bool userInput(sf::Event& event) override;
 		void draw(sf::RenderWindow& renderWindow);
 		void rescale(float, float) override;
-		ImageButton::ImageButton();
+		ImageButton();
 	};
 
 	class InputBox : public Label

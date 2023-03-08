@@ -126,7 +126,7 @@ void initOptionsMenu()
 {
 	optionsMenu.renderWindow = &mainRenderWindow;
 	optionsMenu.loadFont(&font);
-	arrow.loadFromFile("Misc\\left-arrow.png");
+	arrow.loadFromFile("Misc/left-arrow.png");
 	
 	optionsMenu.addLabel("Resolution", { 300, 130 }, {150, 50}, (GUI::ElementID)SettingsMenu::Title);
 	optionsMenu.addLabel(resolutionList[0].first, { 350, 190 }, {200, 50}, (GUI::ElementID)SettingsMenu::ScreenRes);

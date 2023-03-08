@@ -1,3 +1,4 @@
+#include <string.h>
 #include "SFML/Graphics.hpp"
 #include "Ping-pong.h"
 #include "GameStates.h"
@@ -154,7 +155,7 @@ int ENTRY_POINT
 				received = 0;
 				*data = '\0';
 				status = udpSock.receive(data, sizeof(data), received, remoteIP, port);
-				if (std::strcmp(data, "UDP_CLIENT_REQUEST") == 0)
+				if (strcmp(data, "UDP_CLIENT_REQUEST") == 0)
 					connectionStatus = ConnectionStatus::Replying;
 			}
 
