@@ -2,6 +2,7 @@
 #include "SFML/Window/Keyboard.hpp"
 
 #define PRESSED_KEYS_ARRAY_LENGTH 8
+#define OUT_OF_RANGE 255
 
 namespace WindowInputHandlers
 {

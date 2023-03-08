@@ -218,10 +218,18 @@ void PongHost::sendData()
     data.clear();
 
     EGameState tmpGameState = gameState.getGameState();
-    data.append((char*)&firstPlatform.getCoords(), sizeof(Points2D::Coords));
-    data.append((char*)&secondPlatform.getCoords(), sizeof(Points2D::Coords));
-    data.append((char*)&ball.getCoords(), sizeof(Points2D::Coords));
-    data.append((char*)&playerScore.getScore(), sizeof(PlayerScore));
+    PlayerScore score = playerScore.getScore();
+    Points2D::Coords buf = firstPlatform.getCoords();
+
+    data.append((char*)&buf, sizeof(Points2D::Coords));
+
+    buf = secondPlatform.getCoords();
+    data.append((char*)&buf, sizeof(Points2D::Coords));
+
+    buf = ball.getCoords();
+    data.append((char*)&buf, sizeof(Points2D::Coords));
+
+    data.append((char*)&score, sizeof(PlayerScore));
     data.append((char*)&tmpGameState, sizeof(EGameState));
 
     network->sendMessage(data);

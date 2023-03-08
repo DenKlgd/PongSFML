@@ -24,11 +24,11 @@ unsigned char KeyboardInputHandler::checkKeyInArray(const sf::Keyboard::Key key)
 
 bool KeyboardInputHandler::pushKey(const sf::Keyboard::Key key)
 {
-	if (checkKeyInArray(key) != unsigned char(-1))
+	if (checkKeyInArray(key) != OUT_OF_RANGE)
 		return false;
 
 	unsigned char index = getFirstEmptyIndex();
-	if (index == unsigned char(-1))
+	if (index == OUT_OF_RANGE)
 		return false;
 
 	pressedKeys[index].isActive = true;
@@ -41,7 +41,7 @@ bool KeyboardInputHandler::pushKey(const sf::Keyboard::Key key)
 bool KeyboardInputHandler::popKey(const sf::Keyboard::Key key)
 {
 	unsigned char index = checkKeyInArray(key);
-	if (index == unsigned char(-1))
+	if (index == OUT_OF_RANGE)
 		return false;
 
 	pressedKeys[index].isActive = false;
@@ -51,7 +51,7 @@ bool KeyboardInputHandler::popKey(const sf::Keyboard::Key key)
 
 bool KeyboardInputHandler::isPressed(const sf::Keyboard::Key key)
 {
-	if (checkKeyInArray(key) != unsigned char(-1))
+	if (checkKeyInArray(key) != OUT_OF_RANGE)
 		return true;
 
 	return false;

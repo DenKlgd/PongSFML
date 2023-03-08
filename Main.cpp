@@ -10,7 +10,7 @@
 #ifdef _WIN32
 	#include <Windows.h>
 	#define ENTRY_POINT WINAPI WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
-#elif
+#else
 	#define ENTRY_POINT main()
 #endif
 
@@ -160,7 +160,7 @@ int ENTRY_POINT
 
 			if (connectionStatus == ConnectionStatus::Replying)
 			{
-				memcpy_s(data, sizeof(data), "UDP_HOST_REPLY\0", strlen("UDP_HOST_REPLY") + 1);
+				memcpy(data, "UDP_HOST_REPLY\0", strlen("UDP_HOST_REPLY") + 1);
 				status = udpSock.send(data, strlen(data) + 1, remoteIP, port);
 				if (status != sf::Socket::Status::Done)
 					connectionStatus = ConnectionStatus::WaitingForConnections;
@@ -185,7 +185,7 @@ int ENTRY_POINT
 		case EGameState::JoiningToHost:
 			if (connectionStatus == ConnectionStatus::RequestingConnection)
 			{
-				memcpy_s(data, sizeof(data), "UDP_CLIENT_REQUEST\0", strlen("UDP_CLIENT_REQUEST") + 1);
+				memcpy(data, "UDP_CLIENT_REQUEST\0", strlen("UDP_CLIENT_REQUEST") + 1);
 				status = udpSock.send(data, strlen(data) + 1, remoteIP, port);
 				if (status == sf::Socket::Status::Done)
 					connectionStatus = ConnectionStatus::WaitingForReply;
